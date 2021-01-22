@@ -109,7 +109,7 @@ class Check extends PluginBase implements Listener
       Check::msg ($player, '수표를 사용하셨습니다.');
       EconomyAPI::getInstance ()->addMoney ($player, $entry->getValue ());
       $item->setCount ($item->getCount () - 1);
-      $player->getInventory->setItemInHand ($item);
+      $player->getInventory ()->setItemInHand ($item);
     }
   }
 
