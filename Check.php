@@ -4,7 +4,7 @@
  * @name Check
  * @main discord3682\check\Check
  * @author discord3682
- * @version 0.0.1
+ * @version 0.0.2
  * @api 3.0.0
  */
 
@@ -15,11 +15,12 @@ use pocketmine\plugin\PluginBase;
 use pocketmine\plugin\Plugin;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\Listener;
+use pocketmine\utils\SingletonTrait;
 use pocketmine\command\PluginCommand;
 use pocketmine\command\CommandSender;
 use pocketmine\nbt\tag\IntTag;
+use pocketmine\form\Form;
 use pocketmine\item\Item;
-use pocketmine\utils\SingletonTrait;
 use pocketmine\Player;
 
 class Check extends PluginBase implements Listener
@@ -106,10 +107,89 @@ class Check extends PluginBase implements Listener
 
     if (($entry = $item->getNamedTagEntry ('check')) instanceof IntTag)
     {
-      Check::msg ($player, '수표를 사용하셨습니다.');
-      EconomyAPI::getInstance ()->addMoney ($player, $entry->getValue ());
-      $item->setCount ($item->getCount () - 1);
-      $player->getInventory ()->setItemInHand ($item);
+      if (!$player->isSneaking ())
+      {
+        Check::msg ($player, '수표를 사용하셨습니다.');
+        EconomyAPI::getInstance ()->addMoney ($player, $entry->getValue ());
+        $item->setCount ($item->getCount () - 1);
+        $player->getInventory ()->setItemInHand ($item);
+      }else
+      {
+        $player->sendForm (new class ($player, $item) implements Form
+        {
+
+          private $player;
+          private $item;
+
+          public function __construct (Player $player, Item $item)
+          {
+            $this->player = $player;
+            $this->item = $item;
+          }
+
+          public function jsonSerialize () : array
+          {
+            $player = $this->player;
+            $item = $this->item;
+            $all = 0;
+
+        		foreach ($player->getInventory ()->all ($item) as $slot => $content)
+            {
+        			if ($slot < $player->getInventory ()->getSize ())
+              {
+                $all += $content->getCount ();
+        			}
+        		}
+
+            return [
+              'type' => 'custom_form',
+              'title' => '§l§0수표를 사용합니다.',
+              'content' => [
+                [
+                  'type' => 'label',
+                  'text' => "\n" . '§r§f' . $item->getCustomName () . "\n" . '§r§f보유한 수표 수 : ' . $all
+                ],
+
+                [
+                  'type' => 'input',
+                  'text' => ' ',
+                  'placeholder' => '§r§7터치하여 입력'
+                ]
+              ]
+            ];
+          }
+
+          public function handleResponse (Player $player, $data) : void
+          {
+            if (!isset ($data [1]) or $data [1] === null)
+            {
+              Check::msg ($player, '빈칸을 채워주십시오.');
+            }else
+            {
+              if (is_numeric ($data [1]))
+              {
+                $data [1] = abs ($data [1]);
+                $item = $this->item;
+                $item->setCount ($data [1]);
+
+                if ($player->getInventory ()->contains ($item))
+                {
+                  Check::msg ($player, '수표를 사용하셨습니다.');
+                  EconomyAPI::getInstance ()->addMoney ($player, ($item->getNamedTagEntry ('check')->getValue () * $data [1]));
+
+                  $player->getInventory ()->removeItem ($item);
+                }else
+                {
+                  Check::msg ($player, '수표가 부족합니다.');
+                }
+              }else
+              {
+                Check::msg ($player, '숫자로 입력하여 주십시오.');
+              }
+            }
+          }
+        });
+      }
     }
   }
 
