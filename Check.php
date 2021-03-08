@@ -133,13 +133,13 @@ class Check extends PluginBase implements Listener
             $item = $this->item;
             $all = 0;
 
-        		foreach ($player->getInventory ()->all ($item) as $slot => $content)
+            foreach ($player->getInventory ()->all ($item) as $slot => $content)
             {
-        			if ($slot < $player->getInventory ()->getSize ())
+              if ($slot < $player->getInventory ()->getSize ())
               {
                 $all += $content->getCount ();
-        			}
-        		}
+              }
+            }
 
             return [
               'type' => 'custom_form',
